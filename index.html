@@ -19,11 +19,30 @@
       <span class="brand-badge" style="border-color: rgba(16, 185, 129, 0.4); color: #34d399;">EAC SAFE</span>
     </div>
 
-    <!-- System Switcher -->
-    <div class="system-switcher">
-      <button class="sys-btn active" data-system="stanton">STANTON SYSTEM</button>
-      <button class="sys-btn" data-system="pyro">PYRO SYSTEM</button>
-      <button class="sys-btn" data-system="interstellar">INTERSTELLAR (DUAL)</button>
+    <!-- Star Citizen Referral Code Pill -->
+    <div class="referral-banner">
+      <span class="ref-label">REFERRAL (+5K aUEC):</span>
+      <span class="ref-code" id="referral-code-val">STAR-6VLH-WPMS</span>
+      <button id="btn-copy-referral" class="ref-copy-btn" title="Copy Referral Code to Clipboard">Copy</button>
+      <a href="https://robertsspaceindustries.com/enlist?referral=STAR-6VLH-WPMS" target="_blank" rel="noopener" class="ref-enlist-link" title="Enlist on RSI with bonus 5,000 aUEC">Enlist ↗</a>
+    </div>
+
+    <!-- System Switcher & HUD Toggle -->
+    <div class="flex items-center gap-2">
+      <div class="system-switcher">
+        <button class="sys-btn active" data-system="stanton">STANTON SYSTEM</button>
+        <button class="sys-btn" data-system="pyro">PYRO SYSTEM</button>
+        <button class="sys-btn" data-system="interstellar">INTERSTELLAR (DUAL)</button>
+      </div>
+
+      <button id="btn-cockpit-hud" class="btn-hud-toggle" title="Open Distraction-Free Cockpit HUD (Mobile / Second Screen)">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        <span>COCKPIT HUD</span>
+      </button>
     </div>
 
     <!-- Quick Search -->
@@ -58,67 +77,60 @@
               <span id="fleet-total-capacity" class="text-[11px] font-mono text-cyan-400 font-bold">Total: 0 SCU</span>
             </div>
             <div id="fleet-roster-container" class="space-y-1.5 mb-2"></div>
-            <div class="flex items-center gap-1.5">
-              <select id="fleet-ship-selector" class="form-select text-xs flex-1"></select>
-              <button id="btn-add-fleet-ship" class="action-btn text-xs py-1.5 px-3 bg-cyan-600/30 border border-cyan-500/50 hover:bg-cyan-600/50 text-cyan-200">
+
+            <!-- Add Ship to Fleet Controls -->
+            <div class="flex gap-1.5">
+              <select id="fleet-ship-selector" class="form-select text-xs py-1 flex-1"></select>
+              <button id="btn-add-fleet-ship" class="action-btn text-xs py-1 px-2.5 whitespace-nowrap bg-blue-600/30 border border-blue-500/50 hover:bg-blue-600/50 text-blue-200">
                 + Add Ship
               </button>
             </div>
           </div>
 
-          <!-- CURRENT LOCATION / STARTING POSITION -->
-          <div class="location-input-group mb-3">
-            <div class="input-label" style="color: #60a5fa;">
-              <span>CURRENT LOCATION / STARTING POSITION</span>
-              <span class="text-[10px] text-slate-400 font-normal">Where is your ship docked?</span>
-            </div>
-            <div id="start-chip-container" class="mb-1.5"></div>
-            <div class="search-wrapper">
-              <input type="text" id="start-input" placeholder="Set departure port (e.g. Everus, Grim HEX)..." autocomplete="off">
-              <div id="start-dropdown" class="autocomplete-dropdown hidden"></div>
-            </div>
-          </div>
-
-          <!-- HAULING MODE SWITCHER -->
+          <!-- Logistics Hauling Mode Switcher -->
           <div class="mb-3">
             <label class="input-label mb-1" style="color: #cbd5e1;">LOGISTICS HAULING MODE</label>
-            <div class="grid grid-cols-2 gap-1.5 p-1 rounded bg-slate-900/80 border border-slate-800">
-              <button id="mode-bulk-btn" class="fleet-tab-btn active text-center font-bold" style="padding: 6px;">
+            <div class="flex rounded border border-slate-800 p-0.5 bg-slate-950">
+              <button id="mode-bulk-btn" class="fleet-tab-btn flex-1 text-center py-1 text-xs active">
                 📦 Bulk Trading
               </button>
-              <button id="mode-contracts-btn" class="fleet-tab-btn text-center font-bold" style="padding: 6px;">
+              <button id="mode-contracts-btn" class="fleet-tab-btn flex-1 text-center py-1 text-xs">
                 📋 Contract Missions
               </button>
             </div>
           </div>
 
+          <!-- Starting Fleet Staging Base -->
+          <div class="mb-3">
+            <label class="input-label mb-1" style="color: #cbd5e1;">FLEET BASE / DEPARTURE (OPTIONAL)</label>
+            <div id="start-chip-container" class="mb-1.5"></div>
+            <div class="search-wrapper">
+              <input type="text" id="start-input" placeholder="Set global fleet departure port..." autocomplete="off">
+              <div id="start-dropdown" class="autocomplete-dropdown hidden"></div>
+            </div>
+          </div>
+
           <!-- BULK TRADING MODE CONTAINER -->
           <div id="bulk-mode-container">
-            <!-- FROM Locations -->
-            <div class="location-input-group mb-3">
-              <div class="input-label label-from">
-                <span>ORIGIN / PICKUPS (FROM)</span>
-                <span class="text-[10px] text-slate-400 font-normal">Optional SCU per stop</span>
-              </div>
-              <div id="from-chips" class="chips-container"></div>
-              <div class="input-row">
-                <div class="search-wrapper">
-                  <input type="text" id="from-input" placeholder="Type pickup location..." autocomplete="off">
+            <!-- Pickup Locations (FROM) with SCU Quantities -->
+            <div class="mb-3">
+              <label class="input-label mb-1" style="color: #38bdf8;">PICKUP ORIGINS (FROM)</label>
+              <div id="from-chips" class="flex flex-wrap gap-1 mb-1.5"></div>
+              <div class="flex items-center gap-1.5">
+                <div class="search-wrapper flex-1">
+                  <input type="text" id="from-input" placeholder="Search pickups..." autocomplete="off">
                   <div id="from-dropdown" class="autocomplete-dropdown hidden"></div>
                 </div>
-                <input type="number" id="from-scu-input" placeholder="SCU" min="1" max="100000" class="scu-input" title="Optional cargo quantity to load (SCU)">
+                <input type="number" id="from-scu-input" placeholder="SCU" min="1" max="100000" class="scu-input" title="Cargo SCU demand at this location">
               </div>
             </div>
 
-            <!-- TO Locations -->
-            <div class="location-input-group mb-3">
-              <div class="input-label label-to">
-                <span>DELIVERY / EMPTYING DESTINATIONS (TO)</span>
-                <span class="text-[10px] text-slate-400 font-normal">Offload destinations</span>
-              </div>
-              <div id="to-chips" class="chips-container"></div>
+            <!-- Delivery Dropoffs (TO) -->
+            <div class="mb-3">
+              <label class="input-label mb-1" style="color: #34d399;">DELIVERY DESTINATIONS (TO)</label>
+              <div id="to-chips" class="flex flex-wrap gap-1 mb-1.5"></div>
               <div class="search-wrapper">
-                <input type="text" id="to-input" placeholder="Type dropoff location (e.g. Everus, Area 18)..." autocomplete="off">
+                <input type="text" id="to-input" placeholder="Search delivery dropoff..." autocomplete="off">
                 <div id="to-dropdown" class="autocomplete-dropdown hidden"></div>
               </div>
             </div>
@@ -158,6 +170,17 @@
             <select id="qt-drive-select" class="form-select"></select>
           </div>
 
+          <!-- Security & Threat Level Routing Filter -->
+          <div class="mb-3 p-2 rounded bg-slate-900/70 border border-slate-800">
+            <label class="flex items-center gap-2 cursor-pointer text-xs select-none">
+              <input type="checkbox" id="avoid-threats-toggle" class="form-checkbox text-amber-500 rounded bg-slate-950 border-slate-700">
+              <span class="font-medium text-amber-400">⚠️ Avoid Unmonitored Scrap Yards & Hostile Gang Outposts</span>
+            </label>
+            <div class="text-[10px] text-slate-500 mt-1 pl-5">
+              Reroutes around Grim HEX, Brio's, Samson's, and Pyro pirate syndicate outposts unless directly targeted.
+            </div>
+          </div>
+
           <!-- Commodity Trade & Profit Calculator (Optional) -->
           <div class="mb-3">
             <div class="flex justify-between items-center mb-1">
@@ -180,21 +203,24 @@
           </div>
 
           <!-- Action Buttons -->
-          <div class="space-y-2">
-            <button id="optimize-btn" class="btn-primary">
+          <div class="flex gap-2 mb-3">
+            <button id="optimize-btn" class="btn-primary flex-1">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
+                <polygon points="5 3 19 12 5 21 5 3"/>
               </svg>
               CALCULATE FLEET ROUTES
             </button>
-            <button id="clear-btn" class="btn-secondary" style="margin-top: 6px;">
-              CLEAR WAYPOINTS
+            <button id="clear-btn" class="btn-secondary" title="Clear All Destinations">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
             </button>
           </div>
         </div>
 
         <!-- Route Results Panel -->
-        <div id="route-results" class="route-results-container hidden">
+        <div id="route-results" class="hidden space-y-3 pb-6">
           <div class="panel-section-title">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
@@ -255,15 +281,52 @@
             </div>
           </div>
 
-          <!-- Save Current Route Button -->
-          <button id="btn-save-temp-route" class="btn-save-route">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            SAVE TEMPORARY FLEET ROUTE
-          </button>
+          <!-- Actions: Save Route & Share Plan URL -->
+          <div class="flex items-center gap-2">
+            <button id="btn-save-temp-route" class="btn-save-route flex-1">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              <span>Save Route</span>
+            </button>
+            <button id="btn-share-route" class="btn-save-route flex-1 bg-cyan-600/30 border border-cyan-500/50 hover:bg-cyan-600/50 text-cyan-200">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+              <span>Share Plan URL</span>
+            </button>
+          </div>
+
+          <!-- Visual SCU Container Grid & Freight Elevator Kiosk Manifest -->
+          <div id="cargo-manifest-section" class="mt-3 p-2.5 rounded bg-slate-900/90 border border-amber-500/30">
+            <div class="flex justify-between items-center pb-1.5 mb-2 border-b border-slate-800">
+              <div class="flex items-center gap-1.5 text-xs font-bold text-amber-300 uppercase tracking-wider font-mono">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                </svg>
+                <span>Freight Elevator Kiosk Manifest</span>
+              </div>
+              <span id="manifest-total-boxes" class="text-[10px] font-mono text-cyan-400 font-bold">-- Containers</span>
+            </div>
+
+            <!-- Kiosk Spawn Order Pills -->
+            <div id="manifest-kiosk-pills" class="flex flex-wrap gap-1.5 mb-2.5 text-xs font-mono"></div>
+
+            <!-- Top-Down 2D Cargo Grid Visualizer -->
+            <div class="border-t border-slate-800/80 pt-2">
+              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono mb-1">
+                <span>Hold Container Layout Grid:</span>
+                <span id="cargo-deck-utilization" class="text-amber-300 font-bold">0% Deck Used</span>
+              </div>
+              <div id="cargo-deck-visualizer" class="cargo-deck-container"></div>
+            </div>
+          </div>
 
           <!-- Turn-by-Turn Leg Details -->
           <div>
@@ -282,7 +345,7 @@
           </div>
           <div id="saved-routes-container" class="saved-routes-box">
             <div id="no-saved-routes" class="text-xs text-slate-500 italic p-2 border border-dashed border-slate-800 rounded text-center">
-              No saved routes yet. Click "Save Temporary Route" to store active flight plans.
+              No saved routes yet. Click "Save Route" to store active flight plans.
             </div>
           </div>
         </div>
@@ -329,9 +392,36 @@
           <div class="legend-icon" style="background: #a855f7; border-radius: 50%;"></div>
           <span>Jump Point</span>
         </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: #ef4444; border-radius: 2px;"></div>
+          <span>Hostile / Scrap Yard</span>
+        </div>
       </div>
     </main>
   </div>
+
+  <!-- Fullscreen Cockpit HUD Mode (Mobile / Second-Monitor Companion) -->
+  <div id="cockpit-hud-overlay" class="hidden">
+    <div class="hud-top-bar">
+      <div class="flex items-center gap-3">
+        <div class="font-bold text-sm text-cyan-400 font-mono flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>CAECITAS COCKPIT HUD</span>
+        </div>
+        <div id="hud-ship-tabs" class="flex gap-1 overflow-x-auto"></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div id="hud-eta-timer" class="font-mono text-xs text-amber-300 font-bold">ETA: --</div>
+        <button id="btn-close-hud" class="hud-exit-btn">&times; EXIT HUD</button>
+      </div>
+    </div>
+    <div class="hud-content-container">
+      <div id="hud-legs-stream" class="hud-legs-list"></div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="app-toast" class="app-toast hidden"></div>
 
   <!-- Scripts -->
   <script src="js/data.js"></script>

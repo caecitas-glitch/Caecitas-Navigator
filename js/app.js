@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let completedStepUids = new Set();
   let currentFleetResult = null;
   let activeViewTab = "fleet"; // "fleet" or ship ID
+  let activeHudShipId = "all"; // "all" or ship ID in Cockpit HUD
 
   // Contract selection temp state
   let selectedContractFrom = null;
@@ -64,6 +65,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const fleetShipSelector = document.getElementById("fleet-ship-selector");
   const btnAddFleetShip = document.getElementById("btn-add-fleet-ship");
   const fleetTotalCapBadge = document.getElementById("fleet-total-capacity");
+
+  // Referral Code & Sharing Elements
+  const btnCopyReferral = document.getElementById("btn-copy-referral");
+  const btnShareRoute = document.getElementById("btn-share-route");
+  const avoidThreatsToggle = document.getElementById("avoid-threats-toggle");
+
+  // Cockpit HUD Elements
+  const btnCockpitHud = document.getElementById("btn-cockpit-hud");
+  const btnCloseHud = document.getElementById("btn-close-hud");
+  const cockpitHudOverlay = document.getElementById("cockpit-hud-overlay");
+  const hudShipTabs = document.getElementById("hud-ship-tabs");
+  const hudEtaTimer = document.getElementById("hud-eta-timer");
+  const hudLegsStream = document.getElementById("hud-legs-stream");
 
   // Mode Switcher Elements
   const modeBulkBtn = document.getElementById("mode-bulk-btn");
@@ -117,6 +131,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnSaveTempRoute = document.getElementById("btn-save-temp-route");
   const savedRoutesContainer = document.getElementById("saved-routes-container");
   const inspectorPanel = document.getElementById("node-inspector");
+
+  // ==========================================
+  // TOAST NOTIFICATIONS
+  // ==========================================
+  function showToast(msg) {
+    const toast = document.getElementById("app-toast");
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.remove("hidden");
+    setTimeout(() => {
+      toast.classList.add("hidden");
+    }, 3200);
+  }
+
+  // ==========================================
+  // REFERRAL CODE COPY
+  // ==========================================
+  if (btnCopyReferral) {
+    btnCopyReferral.addEventListener("click", () => {
+      navigator.clipboard.writeText("STAR-6VLH-WPMS").then(() => {
+        btnCopyReferral.textContent = "Copied!";
+        showToast("Referral Code STAR-6VLH-WPMS copied (+5,000 aUEC)!");
+        setTimeout(() => {
+          btnCopyReferral.textContent = "Copy";
+        }, 2200);
+      });
+    });
+  }
 
   // ==========================================
   // POPULATE DROPDOWNS
@@ -173,6 +215,16 @@ document.addEventListener("DOMContentLoaded", () => {
   commSellPriceInput.addEventListener("input", () => {
     if (currentFleetResult) executeFleetOptimization();
   });
+
+  // Threat toggle listener
+  if (avoidThreatsToggle) {
+    avoidThreatsToggle.addEventListener("change", () => {
+      if ((haulingMode === "bulk" && fromList.length > 0 && toList.length > 0) ||
+          (haulingMode === "contracts" && contractsList.length > 0)) {
+        executeFleetOptimization();
+      }
+    });
+  }
 
   // ==========================================
   // HAULING MODE SWITCHER (BULK vs CONTRACT MISSIONS)
@@ -627,6 +679,16 @@ document.addEventListener("DOMContentLoaded", () => {
         <button id="close-inspector-btn" class="text-slate-400 hover:text-white text-lg px-1">&times;</button>
       </div>
 
+      ${node.isIllegal || node.isPyroHostile ? `
+        <div class="mt-2.5 p-2 rounded bg-red-950/50 border border-red-500/60 text-[11px] text-red-300 flex items-center gap-2">
+          <span class="text-base shrink-0">⚠️</span>
+          <div>
+            <div class="font-bold text-red-200 uppercase font-mono tracking-wider">${node.isIllegal ? 'UNMONITORED SCRAP YARD / PIRACY ZONE' : 'PYRO HOSTILE / CONTESTED OUTPOST'}</div>
+            <div class="text-[10px] text-red-400 font-mono">${node.threatLevel || 'High Threat'} &bull; Faction: ${node.gang || node.faction || 'Outlaws'}</div>
+          </div>
+        </div>
+      ` : ""}
+
       <div class="mt-3 space-y-2 text-xs">
         <div class="flex justify-between items-center py-1 border-b border-slate-800">
           <span class="text-slate-400">Security:</span>
@@ -634,7 +696,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="flex justify-between items-center py-1 border-b border-slate-800">
           <span class="text-slate-400">Affiliation:</span>
-          <span class="text-slate-200 font-medium">${node.faction || "Independent"}</span>
+          <span class="text-slate-200 font-medium">${node.gang ? `${node.gang} (${node.faction || 'Outlaws'})` : (node.faction || "Independent")}</span>
         </div>
         <div class="flex justify-between items-center py-1 border-b border-slate-800">
           <span class="text-slate-400">Coordinates:</span>
@@ -758,6 +820,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const driveId = qtDriveSelect.value;
     const buyPrice = commBuyPriceInput.value ? parseFloat(commBuyPriceInput.value) : undefined;
     const sellPrice = commSellPriceInput.value ? parseFloat(commSellPriceInput.value) : undefined;
+    const avoidThreats = avoidThreatsToggle ? avoidThreatsToggle.checked : false;
 
     let fleetResult = null;
 
@@ -771,7 +834,8 @@ document.addEventListener("DOMContentLoaded", () => {
         quantumDriveId: driveId,
         commodityId: selectedCommodityId,
         customBuyPrice: buyPrice,
-        customSellPrice: sellPrice
+        customSellPrice: sellPrice,
+        avoidThreats: avoidThreats
       });
     } else {
       // Contract missions mode
@@ -781,7 +845,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       fleetResult = optimizer.computeContractRoutes(fleetShips, contractsList, {
         startLocationId: startingLocationId,
-        quantumDriveId: driveId
+        quantumDriveId: driveId,
+        avoidThreats: avoidThreats
       });
     }
 
@@ -823,6 +888,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Show Results Panel
     routeResultsPanel.classList.remove("hidden");
+
+    // If Cockpit HUD is open, refresh HUD
+    if (!cockpitHudOverlay.classList.contains("hidden")) {
+      renderCockpitHUD();
+    }
   }
 
   function clearFleetResults() {
@@ -875,12 +945,62 @@ document.addEventListener("DOMContentLoaded", () => {
         : "Combined Fleet Flight Plan (All Vessels)";
       renderCombinedFleetBreadcrumbs(currentFleetResult);
       renderCombinedFleetLegs(currentFleetResult);
+      renderCargoManifest(currentFleetResult.containerManifest, currentFleetResult.totalFleetScu);
     } else {
       const shipRoute = currentFleetResult.fleetRoutes.find(r => r.shipInfo.id === tabId) || currentFleetResult.fleetRoutes[0];
       activeTabTitle.textContent = `${shipRoute.shipInfo.name} - Individual Flight Plan (${shipRoute.totalScu} SCU)`;
       renderShipBreadcrumbs(shipRoute);
       renderShipLegs(shipRoute);
+      renderCargoManifest(shipRoute.containerManifest, shipRoute.capacity);
     }
+  }
+
+  // ==========================================
+  // FREIGHT ELEVATOR MANIFEST & VISUAL CARGO DECK
+  // ==========================================
+  function renderCargoManifest(manifest, capacity = 0) {
+    const pillsContainer = document.getElementById("manifest-kiosk-pills");
+    const visualizer = document.getElementById("cargo-deck-visualizer");
+    const totalBoxesEl = document.getElementById("manifest-total-boxes");
+    const utilEl = document.getElementById("cargo-deck-utilization");
+
+    if (!manifest || manifest.totalScu === 0) {
+      pillsContainer.innerHTML = `<span class="text-slate-500 text-xs italic">No active cargo to spawn.</span>`;
+      visualizer.innerHTML = `<div class="text-slate-600 text-[11px] p-2 text-center w-full font-mono">Empty cargo hold</div>`;
+      totalBoxesEl.textContent = "0 Containers";
+      utilEl.textContent = "0% Deck Used";
+      return;
+    }
+
+    totalBoxesEl.textContent = `${manifest.totalBoxes} Container${manifest.totalBoxes === 1 ? '' : 's'} (${manifest.totalScu.toLocaleString()} SCU)`;
+    const utilPercent = capacity > 0 ? Math.min(100, Math.round((manifest.totalScu / capacity) * 100)) : 100;
+    utilEl.textContent = `${utilPercent}% Deck Used`;
+
+    // Render Kiosk Spawn Pills
+    pillsContainer.innerHTML = "";
+    const boxSizes = [32, 24, 16, 8, 2, 1];
+    boxSizes.forEach(size => {
+      const count = manifest.boxes[size] || 0;
+      if (count > 0) {
+        const pill = document.createElement("div");
+        pill.className = `kiosk-pill kiosk-pill-${size}`;
+        pill.innerHTML = `<span>${count}&times;</span> <span>${size} SCU Box</span> <span class="text-[9px] opacity-75">(${count * size} SCU)</span>`;
+        pillsContainer.appendChild(pill);
+      }
+    });
+
+    // Render Visual Deck Grid
+    visualizer.innerHTML = "";
+    boxSizes.forEach(size => {
+      const count = manifest.boxes[size] || 0;
+      for (let i = 0; i < count; i++) {
+        const box = document.createElement("div");
+        box.className = `cargo-box cargo-box-${size}`;
+        box.textContent = `${size}`;
+        box.title = `${size} SCU Standard Container`;
+        visualizer.appendChild(box);
+      }
+    });
   }
 
   // ==========================================
@@ -1013,6 +1133,14 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="text-xs font-mono text-cyan-400">${leg.distanceMkm.toFixed(2)} Mkm</span>
       </div>
 
+      ${leg.threatBadge ? `
+        <div class="mb-2">
+          <span class="${leg.threatBadge.type === 'illegal' ? 'threat-badge-danger' : 'threat-badge-warning'}">
+            ⚠️ ${leg.threatBadge.label}: ${leg.threatBadge.details}
+          </span>
+        </div>
+      ` : ""}
+
       <div class="flex items-center justify-between text-xs text-slate-400 bg-slate-900/60 p-2 rounded border border-slate-800/80">
         <div>
           <span class="text-slate-500">Action:</span>
@@ -1065,6 +1193,247 @@ document.addEventListener("DOMContentLoaded", () => {
       completedStepUids.add(uid);
     }
     showTabView(activeViewTab);
+    if (!cockpitHudOverlay.classList.contains("hidden")) {
+      renderCockpitHUD();
+    }
+  }
+
+  // ==========================================
+  // FULLSCREEN COCKPIT HUD MODE
+  // ==========================================
+  function openCockpitHUD() {
+    if (!currentFleetResult) {
+      showToast("Calculate a fleet route first to open Cockpit HUD.");
+      return;
+    }
+    cockpitHudOverlay.classList.remove("hidden");
+    renderCockpitHUD();
+  }
+
+  function closeCockpitHUD() {
+    cockpitHudOverlay.classList.add("hidden");
+    showTabView(activeViewTab);
+  }
+
+  if (btnCockpitHud) btnCockpitHud.addEventListener("click", openCockpitHUD);
+  if (btnCloseHud) btnCloseHud.addEventListener("click", closeCockpitHUD);
+
+  function renderCockpitHUD() {
+    if (!currentFleetResult) return;
+
+    hudEtaTimer.textContent = `ETA: ${currentFleetResult.maxFleetTimeFormatted}`;
+
+    // Render HUD Ship Tabs
+    hudShipTabs.innerHTML = "";
+    const allBtn = document.createElement("button");
+    allBtn.className = `fleet-tab-btn py-1 px-2.5 text-xs ${activeHudShipId === "all" ? "active" : ""}`;
+    allBtn.textContent = `All Ships (${currentFleetResult.fleetRoutes.length})`;
+    allBtn.addEventListener("click", () => {
+      activeHudShipId = "all";
+      renderCockpitHUD();
+    });
+    hudShipTabs.appendChild(allBtn);
+
+    currentFleetResult.fleetRoutes.forEach((route, idx) => {
+      const shipBtn = document.createElement("button");
+      shipBtn.className = `fleet-tab-btn py-1 px-2.5 text-xs ${activeHudShipId === route.shipInfo.id ? "active" : ""}`;
+      shipBtn.style.color = route.color;
+      shipBtn.innerHTML = `S${idx + 1}: ${route.shipInfo.name}`;
+      shipBtn.addEventListener("click", () => {
+        activeHudShipId = route.shipInfo.id;
+        renderCockpitHUD();
+      });
+      hudShipTabs.appendChild(shipBtn);
+    });
+
+    // Render Stream of Legs
+    hudLegsStream.innerHTML = "";
+
+    const routesToDisplay = activeHudShipId === "all"
+      ? currentFleetResult.fleetRoutes
+      : currentFleetResult.fleetRoutes.filter(r => r.shipInfo.id === activeHudShipId);
+
+    let foundFirstActive = false;
+
+    routesToDisplay.forEach(route => {
+      route.legs.forEach(leg => {
+        const isDone = completedStepUids.has(leg.toUid);
+        const isActive = !isDone && !foundFirstActive;
+        if (isActive) foundFirstActive = true;
+
+        const card = document.createElement("div");
+        card.className = `hud-leg-card ${isDone ? 'completed' : ''} ${isActive ? 'active-leg' : ''}`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <button class="hud-check-btn ${isDone ? 'completed' : ''}" data-uid="${leg.toUid}">
+                ${isDone ? '&#10003;' : '&#9675;'}
+              </button>
+              <div>
+                <div class="text-[10px] font-mono tracking-wider font-bold" style="color: ${route.color};">
+                  ${route.shipInfo.name.toUpperCase()} &bull; STOP #${leg.legIndex}
+                </div>
+                <div class="text-base font-bold text-white tracking-wide">
+                  ${leg.from.name} ➔ <span class="text-cyan-400">${leg.to.name}</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-right font-mono">
+              <div class="text-sm font-bold text-emerald-400">${leg.timeFormatted}</div>
+              <div class="text-xs text-slate-400">${leg.distanceMkm.toFixed(2)} Mkm</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs bg-slate-950/80 p-2 rounded border border-slate-800">
+            <div class="text-slate-300">
+              ${leg.splitNote ? `<span class="text-amber-300 font-bold">${leg.splitNote}</span>` : leg.stepType === 'pickup' ? `<span class="text-cyan-300 font-bold">Collect +${leg.scuLoaded} SCU</span>` : `<span class="text-emerald-300 font-bold">Deliver -${leg.scuUnloaded} SCU</span>`}
+            </div>
+            <div class="text-slate-400 font-mono text-[11px]">
+              Hold: <strong class="text-white">${leg.cargoOnboard} / ${leg.cargoCapacity} SCU</strong>
+            </div>
+          </div>
+
+          ${leg.threatBadge ? `
+            <div class="text-[10px] font-mono font-bold text-red-400 bg-red-950/30 p-1.5 rounded border border-red-500/30 flex items-center gap-1.5">
+              <span>⚠️</span>
+              <span>${leg.threatBadge.label.toUpperCase()}: ${leg.threatBadge.details}</span>
+            </div>
+          ` : ""}
+        `;
+
+        card.querySelector(".hud-check-btn").addEventListener("click", () => {
+          toggleStepCompletion(leg.toUid);
+        });
+
+        hudLegsStream.appendChild(card);
+      });
+    });
+  }
+
+  // ==========================================
+  // SHAREABLE FLEET PLAN LINKS (URL DEEP-LINKING)
+  // ==========================================
+  function shareCurrentPlan() {
+    if (fleetShips.length === 0) {
+      showToast("Please add at least one vessel to share.");
+      return;
+    }
+    if (haulingMode === "bulk" && (fromList.length === 0 || toList.length === 0)) {
+      showToast("Please specify pickups and dropoffs to share.");
+      return;
+    }
+    if (haulingMode === "contracts" && contractsList.length === 0) {
+      showToast("Please add at least one contract to share.");
+      return;
+    }
+
+    const payload = {
+      m: haulingMode,
+      b: startingLocationId,
+      s: fleetShips.map(s => ({ t: s.typeId, name: s.name, scu: s.scu, c: s.color, st: s.startLocationId })),
+      f: fromList.map(f => ({ id: f.id, scu: f.scu })),
+      t: toList.map(t => ({ id: t.id })),
+      c: contractsList.map(c => ({ id: c.id, name: c.name, fromId: c.fromId, toId: c.toId, scu: c.scu, cargoName: c.cargoName })),
+      comm: selectedCommodityId,
+      th: avoidThreatsToggle ? avoidThreatsToggle.checked : false
+    };
+
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    const shareUrl = `${window.location.origin}${window.location.pathname}?plan=${encodeURIComponent(encoded)}`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showToast("🔗 Shareable Fleet Plan link copied to clipboard!");
+      }).catch(() => {
+        prompt("Copy your shareable fleet link:", shareUrl);
+      });
+    } else {
+      prompt("Copy your shareable fleet link:", shareUrl);
+    }
+  }
+
+  if (btnShareRoute) btnShareRoute.addEventListener("click", shareCurrentPlan);
+
+  function loadPlanFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const planParam = urlParams.get("plan");
+    if (!planParam) return false;
+
+    try {
+      const decoded = decodeURIComponent(planParam);
+      const jsonStr = decodeURIComponent(escape(atob(decoded)));
+      const plan = JSON.parse(jsonStr);
+
+      if (plan.m) haulingMode = plan.m;
+      updateModeUI();
+
+      startingLocationId = plan.b || null;
+      renderStartChip();
+
+      if (plan.s && Array.isArray(plan.s)) {
+        fleetShips = plan.s.map((s, idx) => ({
+          id: `ship_${Date.now()}_${idx}`,
+          typeId: s.t,
+          name: s.name,
+          scu: s.scu,
+          fuelTankL: 11000,
+          qtDriveId: "size3_industrial",
+          color: s.c || fleetColors[idx % fleetColors.length],
+          startLocationId: s.st || null
+        }));
+        renderFleetRoster();
+      }
+
+      if (plan.f && Array.isArray(plan.f)) {
+        fromList = plan.f.map(f => ({
+          uid: `p_${f.id}_${Date.now()}_${Math.random()}`,
+          id: f.id,
+          scu: f.scu || 0
+        }));
+      }
+
+      if (plan.t && Array.isArray(plan.t)) {
+        toList = plan.t.map(t => ({
+          uid: `d_${t.id}_${Date.now()}_${Math.random()}`,
+          id: t.id
+        }));
+      }
+
+      if (plan.c && Array.isArray(plan.c)) {
+        contractsList = plan.c.map(c => ({
+          id: c.id,
+          name: c.name,
+          cargoName: c.cargoName,
+          fromId: c.fromId,
+          toId: c.toId,
+          fromName: data.locationMap[c.fromId]?.name || c.fromId,
+          toName: data.locationMap[c.toId]?.name || c.toId,
+          scu: c.scu
+        }));
+      }
+
+      if (plan.comm) {
+        selectedCommodityId = plan.comm;
+        commoditySelect.value = plan.comm;
+      }
+
+      if (plan.th !== undefined && avoidThreatsToggle) {
+        avoidThreatsToggle.checked = !!plan.th;
+      }
+
+      renderChips();
+      renderContractsList();
+
+      setTimeout(() => {
+        executeFleetOptimization();
+        showToast("Fleet plan loaded from shared URL!");
+      }, 100);
+
+      return true;
+    } catch (e) {
+      console.warn("Could not load plan from URL:", e);
+      return false;
+    }
   }
 
   // ==========================================
@@ -1094,7 +1463,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (saved.length === 0) {
       savedRoutesContainer.innerHTML = `
         <div class="text-xs text-slate-500 italic p-2 border border-dashed border-slate-800 rounded text-center">
-          No saved routes yet. Click "Save Temporary Fleet Route" to store active flight plans.
+          No saved routes yet. Click "Save Route" to store active flight plans.
         </div>
       `;
       return;
@@ -1128,6 +1497,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function saveCurrentRoute() {
+    if (fleetShips.length === 0) {
+      alert("No vessels in fleet to save.");
+      return;
+    }
     if (haulingMode === "bulk" && (fromList.length === 0 || toList.length === 0)) {
       alert("No bulk waypoints to save.");
       return;
@@ -1205,6 +1578,9 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRoutes();
   renderChips();
   renderContractsList();
+
+  // Check URL share link
+  const wasLoadedFromUrl = loadPlanFromUrl();
 
   // Action Buttons
   optimizeBtn.addEventListener("click", () => {

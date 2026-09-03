@@ -430,6 +430,37 @@ class RouteOptimizer {
   }
 
   /**
+   * Calculate optimal combination of standard Star Citizen container sizes
+   * (32, 24, 16, 8, 2, 1 SCU) for cargo hold loading & freight elevator spawn order.
+   */
+  calculateContainerBreakdown(totalScu) {
+    const scu = Math.max(0, parseInt(totalScu) || 0);
+    if (scu === 0) return { totalScu: 0, totalBoxes: 0, boxes: {} };
+
+    let remaining = scu;
+    const boxSizes = [32, 24, 16, 8, 2, 1];
+    const breakdown = {};
+    let totalBoxes = 0;
+
+    for (const size of boxSizes) {
+      const count = Math.floor(remaining / size);
+      if (count > 0) {
+        breakdown[size] = count;
+        totalBoxes += count;
+        remaining -= count * size;
+      } else {
+        breakdown[size] = 0;
+      }
+    }
+
+    return {
+      totalScu: scu,
+      totalBoxes: totalBoxes,
+      boxes: breakdown
+    };
+  }
+
+  /**
    * Main Compute Route entry point:
    * Handles start locations, duplicate waypoints, fuel consumption, pad checks & profit calculations
    */
@@ -852,6 +883,90 @@ class RouteOptimizer {
       }
     }
 
+    // Makespan Reduction & Local Search Swap:
+    // If one ship has a significantly longer path than another ship, test if transferring
+    // any pickup to a faster ship reduces the maximum flight distance/time across the fleet.
+    if (shipSchedules.length >= 2) {
+      const calcPathDist = (sched) => {
+        const pSteps = sched.steps.filter(st => st.action === "pickup");
+        const origin = sched.steps[0]?.action === "start" ? sched.steps[0].node : (pSteps[0]?.node || null);
+        const drop = dropoffList[0]?.node || null;
+        if (!origin || !drop || pSteps.length === 0) return 0;
+        let d = 0;
+        let cur = origin;
+        for (const st of pSteps) {
+          d += this.getPairwiseDistance(cur, st.node);
+          cur = st.node;
+        }
+        d += this.getPairwiseDistance(cur, drop);
+        return d;
+      };
+
+      for (let iter = 0; iter < 10; iter++) {
+        shipSchedules.sort((a, b) => calcPathDist(b) - calcPathDist(a));
+        const slowest = shipSchedules[0];
+        const fastest = shipSchedules[shipSchedules.length - 1];
+
+        const distSlow = calcPathDist(slowest);
+        const distFast = calcPathDist(fastest);
+
+        if (distSlow - distFast < 40) break;
+
+        const slowPickups = slowest.steps.filter(st => st.action === "pickup");
+        if (slowPickups.length <= 1) break;
+
+        let bestSwapIdx = -1;
+        let bestNewMax = distSlow;
+
+        for (let i = 0; i < slowPickups.length; i++) {
+          const candidateStop = slowPickups[i];
+          if (fastest.availableCap < candidateStop.scuLoaded) continue;
+
+          const testSlowPickups = slowPickups.filter((_, idx) => idx !== i);
+          const testFastPickups = [...fastest.steps.filter(st => st.action === "pickup"), candidateStop];
+
+          const testDistSlow = (() => {
+            const origin = slowest.steps[0]?.action === "start" ? slowest.steps[0].node : testSlowPickups[0]?.node;
+            const drop = dropoffList[0]?.node;
+            if (!origin || !drop || testSlowPickups.length === 0) return 0;
+            let d = 0, cur = origin;
+            for (const st of testSlowPickups) { d += this.getPairwiseDistance(cur, st.node); cur = st.node; }
+            return d + this.getPairwiseDistance(cur, drop);
+          })();
+
+          const testDistFast = (() => {
+            const origin = fastest.steps[0]?.action === "start" ? fastest.steps[0].node : testFastPickups[0]?.node;
+            const drop = dropoffList[0]?.node;
+            if (!origin || !drop || testFastPickups.length === 0) return 0;
+            let d = 0, cur = origin;
+            for (const st of testFastPickups) { d += this.getPairwiseDistance(cur, st.node); cur = st.node; }
+            return d + this.getPairwiseDistance(cur, drop);
+          })();
+
+          const newMax = Math.max(testDistSlow, testDistFast);
+          if (newMax < bestNewMax - 10) {
+            bestNewMax = newMax;
+            bestSwapIdx = i;
+          }
+        }
+
+        if (bestSwapIdx !== -1) {
+          const movedStop = slowPickups[bestSwapIdx];
+          slowest.steps = slowest.steps.filter(st => st !== movedStop);
+          slowest.totalScuLoaded -= movedStop.scuLoaded;
+          slowest.currentHold -= movedStop.scuLoaded;
+          slowest.availableCap += movedStop.scuLoaded;
+
+          fastest.steps.push(movedStop);
+          fastest.totalScuLoaded += movedStop.scuLoaded;
+          fastest.currentHold += movedStop.scuLoaded;
+          fastest.availableCap -= movedStop.scuLoaded;
+        } else {
+          break;
+        }
+      }
+    }
+
     // Optimize geometric order (TSP) for each ship's pickups to avoid zigzagging
     shipSchedules.forEach(sched => {
       const originStep = sched.steps[0]?.action === "start" ? sched.steps[0] : null;
@@ -970,7 +1085,8 @@ class RouteOptimizer {
           cargoCapacity: sched.capacity,
           cargoPercent: cargoPercent,
           fuelBurnL: legFuel,
-          splitNote: nxtStep.splitNote || ""
+          splitNote: nxtStep.splitNote || "",
+          threatBadge: nxt.isIllegal ? { type: 'illegal', label: 'Unmonitored Scrap Yard', details: nxt.threatLevel } : nxt.isPyroHostile ? { type: 'hostile', label: nxt.gang || 'Pirate Outpost', details: nxt.threatLevel } : null
         });
       }
 
@@ -1015,7 +1131,8 @@ class RouteOptimizer {
         estimatedFuelCost: shipFuelCost,
         totalScu: shipScuLoaded,
         capacity: sched.capacity,
-        color: sched.shipInfo.color
+        color: sched.shipInfo.color,
+        containerManifest: this.calculateContainerBreakdown(shipScuLoaded)
       });
     });
 
@@ -1055,7 +1172,8 @@ class RouteOptimizer {
       maxFleetTimeSec: maxFleetTimeSec,
       maxFleetTimeFormatted: this.formatTime(maxFleetTimeSec),
       totalFleetFuelCost: totalFleetFuelCost,
-      fleetCommodityStats: fleetCommodityStats
+      fleetCommodityStats: fleetCommodityStats,
+      containerManifest: this.calculateContainerBreakdown(totalFleetCargoSCU)
     };
   }
 
@@ -1278,7 +1396,8 @@ class RouteOptimizer {
           cargoCapacity: capacity,
           cargoPercent: cargoPercent,
           fuelBurnL: legFuel,
-          splitNote: nxtStep.splitNote || ""
+          splitNote: nxtStep.splitNote || "",
+          threatBadge: nxt.isIllegal ? { type: 'illegal', label: 'Unmonitored Scrap Yard', details: nxt.threatLevel } : nxt.isPyroHostile ? { type: 'hostile', label: nxt.gang || 'Pirate Outpost', details: nxt.threatLevel } : null
         });
       }
 
@@ -1321,7 +1440,8 @@ class RouteOptimizer {
         estimatedFuelCost: shipFuelCost,
         totalScu: shipScuLoaded,
         capacity: capacity,
-        color: ship.color
+        color: ship.color,
+        containerManifest: this.calculateContainerBreakdown(shipScuLoaded)
       });
     });
 
@@ -1334,7 +1454,8 @@ class RouteOptimizer {
       maxFleetTimeSec: maxFleetTimeSec,
       maxFleetTimeFormatted: this.formatTime(maxFleetTimeSec),
       totalFleetFuelCost: totalFleetFuelCost,
-      fleetCommodityStats: null
+      fleetCommodityStats: null,
+      containerManifest: this.calculateContainerBreakdown(totalFleetCargoSCU)
     };
   }
 }

@@ -1346,6 +1346,11 @@ const SC_DATA = {
       "Refuel"
     ],
     "description": "Converted Green Imperial asteroid station and legendary outlaw haven in Stanton."
+  ,
+    "isIllegal": true,
+    "threatLevel": "High - Outlaw / Piracy Hub",
+    "gang": "Nine Tails / Outlaws",
+    "security": "Lawless (Piracy Base)"
   },
   {
     "id": "arc_l1_wide_forest_station",
@@ -1956,6 +1961,11 @@ const SC_DATA = {
       "Shops"
     ],
     "description": "Space station in Pyro (Monox Lagrange Point 4)."
+  ,
+    "isPyroHostile": true,
+    "threatLevel": "Contested / Lawless",
+    "gang": "Fire Rats",
+    "security": "Lawless (Fire Rats)"
   },
   {
     "id": "orbituary",
@@ -1977,6 +1987,11 @@ const SC_DATA = {
       "Shops"
     ],
     "description": "Space station in Pyro (Bloom)."
+  ,
+    "isPyroHostile": true,
+    "threatLevel": "Contested Space Station",
+    "gang": "Overlords",
+    "security": "Lawless (Overlords)"
   },
   {
     "id": "starlight_service_station",
@@ -1997,6 +2012,11 @@ const SC_DATA = {
       "Shops"
     ],
     "description": "Space station in Pyro (Bloom Lagrange Point 1)."
+  ,
+    "isPyroHostile": true,
+    "threatLevel": "Contested Space Station",
+    "gang": "Overlords",
+    "security": "Lawless (Overlords)"
   },
   {
     "id": "patch_city",
@@ -2017,6 +2037,11 @@ const SC_DATA = {
       "Shops"
     ],
     "description": "Space station in Pyro (Bloom Lagrange Point 3)."
+  ,
+    "isPyroHostile": true,
+    "threatLevel": "Contested Settlement",
+    "gang": "Rough & Ready",
+    "security": "Lawless (Rough & Ready)"
   },
   {
     "id": "pyam_farstat_3_5",
@@ -2102,6 +2127,11 @@ const SC_DATA = {
       "Shops"
     ],
     "description": "Space station in Pyro (Pyro V Lagrange Point 5)."
+  ,
+    "isPyroHostile": true,
+    "threatLevel": "Lawless Outpost",
+    "gang": "Fire Rats",
+    "security": "Lawless (Fire Rats)"
   },
   {
     "id": "pyam_farstat_6_2",
@@ -2177,6 +2207,11 @@ const SC_DATA = {
       "Shops"
     ],
     "description": "Space station in Pyro (Pyro VI Lagrange Point 5)."
+  ,
+    "isPyroHostile": true,
+    "threatLevel": "Lawless Depository",
+    "gang": "Citizens for Pyro",
+    "security": "Lawless (Citizens for Pyro)"
   },
   {
     "id": "ruin_station",
@@ -2198,6 +2233,11 @@ const SC_DATA = {
       "Shops"
     ],
     "description": "Space station in Pyro (Terminus)."
+  ,
+    "isPyroHostile": true,
+    "threatLevel": "High / Contested",
+    "gang": "Rough & Ready",
+    "security": "Lawless (Rough & Ready)"
   },
   {
     "id": "gaslight",
@@ -2218,6 +2258,11 @@ const SC_DATA = {
       "Shops"
     ],
     "description": "Space station in Pyro (Pyro V Lagrange Point 2)."
+  ,
+    "isPyroHostile": true,
+    "threatLevel": "Contested Surface Settlement",
+    "gang": "Lawless Syndicate",
+    "security": "Lawless (Contested)"
   },
   {
     "id": "pyam_farstat_2_3",
@@ -2416,6 +2461,11 @@ const SC_DATA = {
       "Cargo / Trade Deck"
     ],
     "description": "Surface outpost on Daymar in Stanton."
+  ,
+    "isIllegal": true,
+    "threatLevel": "High - Unmonitored Scrap Yard (PvP / Piracy Hotspot)",
+    "gang": "Unmonitored / Pirate Scrappers",
+    "security": "Unmonitored / Lawless"
   },
   {
     "id": "bud_s_growery",
@@ -2985,6 +3035,11 @@ const SC_DATA = {
       "Cargo / Trade Deck"
     ],
     "description": "Surface outpost on Hurston in Stanton."
+  ,
+    "isIllegal": true,
+    "threatLevel": "High - Unmonitored Scrap Yard",
+    "gang": "Unmonitored / Scrappers",
+    "security": "Unmonitored / Lawless"
   },
   {
     "id": "samson_son_s_salvage_center",
@@ -3000,6 +3055,11 @@ const SC_DATA = {
       "Cargo / Trade Deck"
     ],
     "description": "Surface outpost on Wala in Stanton."
+  ,
+    "isIllegal": true,
+    "threatLevel": "High - Unmonitored Scrap Yard",
+    "gang": "Unmonitored / Pirate Scrappers",
+    "security": "Unmonitored / Lawless"
   },
   {
     "id": "shubin_mining_facility_sal_2",
@@ -3276,6 +3336,11 @@ const SC_DATA = {
       "Trade Terminal"
     ],
     "description": "Surface outpost on MicroTech in Stanton."
+  ,
+    "isPyroHostile": true,
+    "threatLevel": "Lawless Outpost",
+    "gang": "Rough & Ready",
+    "security": "Lawless (Rough & Ready)"
   },
   {
     "id": "weeping_cove",
