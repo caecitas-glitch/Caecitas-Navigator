@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caecitas Navigator // Fleet Logistics & Route Optimizer</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Top App Navigation Bar -->
+  <header class="app-header">
+    <div class="brand-title">
+      <svg class="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+      <span>CAECITAS NAVIGATOR</span>
+      <span class="brand-badge">STANTON // PYRO</span>
+      <span class="brand-badge" style="border-color: rgba(96, 165, 250, 0.4); color: #60a5fa;">FLEET DISPATCH</span>
+      <span class="brand-badge" style="border-color: rgba(16, 185, 129, 0.4); color: #34d399;">EAC SAFE</span>
+    </div>
+
+    <!-- System Switcher -->
+    <div class="system-switcher">
+      <button class="sys-btn active" data-system="stanton">STANTON SYSTEM</button>
+      <button class="sys-btn" data-system="pyro">PYRO SYSTEM</button>
+      <button class="sys-btn" data-system="interstellar">INTERSTELLAR (DUAL)</button>
+    </div>
+
+    <!-- Quick Search -->
+    <div class="header-search">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="11" cy="11" r="8" stroke-width="2"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65" stroke-width="2"/>
+      </svg>
+      <input type="text" id="global-search" placeholder="Search 200+ stations, outposts, moons..." autocomplete="off">
+      <div id="global-search-dropdown" class="autocomplete-dropdown hidden"></div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <div class="main-container">
+    <!-- Left Navigation & Route Planning Sidebar -->
+    <aside class="planner-sidebar">
+      <div class="sidebar-scroll">
+        <!-- Route Input Section -->
+        <div>
+          <div class="panel-section-title">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            FLEET LOGISTICS & ROUTE PLANNER
+          </div>
+
+          <!-- Active Hauling Fleet Roster -->
+          <div class="mb-3">
+            <div class="flex justify-between items-center mb-1">
+              <label class="input-label" style="color: #cbd5e1;">ACTIVE HAULING FLEET</label>
+              <span id="fleet-total-capacity" class="text-[11px] font-mono text-cyan-400 font-bold">Total: 0 SCU</span>
+            </div>
+            <div id="fleet-roster-container" class="space-y-1.5 mb-2"></div>
+            <div class="flex items-center gap-1.5">
+              <select id="fleet-ship-selector" class="form-select text-xs flex-1"></select>
+              <button id="btn-add-fleet-ship" class="action-btn text-xs py-1.5 px-3 bg-cyan-600/30 border border-cyan-500/50 hover:bg-cyan-600/50 text-cyan-200">
+                + Add Ship
+              </button>
+            </div>
+          </div>
+
+          <!-- CURRENT LOCATION / STARTING POSITION -->
+          <div class="location-input-group mb-3">
+            <div class="input-label" style="color: #60a5fa;">
+              <span>CURRENT LOCATION / STARTING POSITION</span>
+              <span class="text-[10px] text-slate-400 font-normal">Where is your ship docked?</span>
+            </div>
+            <div id="start-chip-container" class="mb-1.5"></div>
+            <div class="search-wrapper">
+              <input type="text" id="start-input" placeholder="Set departure port (e.g. Everus, Grim HEX)..." autocomplete="off">
+              <div id="start-dropdown" class="autocomplete-dropdown hidden"></div>
+            </div>
+          </div>
+
+          <!-- HAULING MODE SWITCHER -->
+          <div class="mb-3">
+            <label class="input-label mb-1" style="color: #cbd5e1;">LOGISTICS HAULING MODE</label>
+            <div class="grid grid-cols-2 gap-1.5 p-1 rounded bg-slate-900/80 border border-slate-800">
+              <button id="mode-bulk-btn" class="fleet-tab-btn active text-center font-bold" style="padding: 6px;">
+                📦 Bulk Trading
+              </button>
+              <button id="mode-contracts-btn" class="fleet-tab-btn text-center font-bold" style="padding: 6px;">
+                📋 Contract Missions
+              </button>
+            </div>
+          </div>
+
+          <!-- BULK TRADING MODE CONTAINER -->
+          <div id="bulk-mode-container">
+            <!-- FROM Locations -->
+            <div class="location-input-group mb-3">
+              <div class="input-label label-from">
+                <span>ORIGIN / PICKUPS (FROM)</span>
+                <span class="text-[10px] text-slate-400 font-normal">Optional SCU per stop</span>
+              </div>
+              <div id="from-chips" class="chips-container"></div>
+              <div class="input-row">
+                <div class="search-wrapper">
+                  <input type="text" id="from-input" placeholder="Type pickup location..." autocomplete="off">
+                  <div id="from-dropdown" class="autocomplete-dropdown hidden"></div>
+                </div>
+                <input type="number" id="from-scu-input" placeholder="SCU" min="1" max="100000" class="scu-input" title="Optional cargo quantity to load (SCU)">
+              </div>
+            </div>
+
+            <!-- TO Locations -->
+            <div class="location-input-group mb-3">
+              <div class="input-label label-to">
+                <span>DELIVERY / EMPTYING DESTINATIONS (TO)</span>
+                <span class="text-[10px] text-slate-400 font-normal">Offload destinations</span>
+              </div>
+              <div id="to-chips" class="chips-container"></div>
+              <div class="search-wrapper">
+                <input type="text" id="to-input" placeholder="Type dropoff location (e.g. Everus, Area 18)..." autocomplete="off">
+                <div id="to-dropdown" class="autocomplete-dropdown hidden"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONTRACT MISSIONS MODE CONTAINER -->
+          <div id="contracts-mode-container" class="hidden mb-3">
+            <div class="flex justify-between items-center mb-1">
+              <label class="input-label" style="color: #f59e0b;">PAIRED MISSION CONTRACTS</label>
+              <span id="contracts-total-scu-badge" class="text-[10px] font-mono text-amber-400 font-bold">0 SCU</span>
+            </div>
+            <div id="contracts-list-container" class="space-y-1.5 mb-2.5"></div>
+
+            <div class="p-2.5 rounded bg-slate-900/90 border border-amber-500/30 space-y-2">
+              <div class="text-[10px] text-amber-300 font-bold uppercase tracking-wider">New Paired Contract</div>
+              <div class="search-wrapper">
+                <input type="text" id="contract-from-input" placeholder="Origin Pickup (e.g. Lorville, HDMS Bezdek)..." autocomplete="off">
+                <div id="contract-from-dropdown" class="autocomplete-dropdown hidden"></div>
+              </div>
+              <div class="search-wrapper">
+                <input type="text" id="contract-to-input" placeholder="Designated Destination (e.g. Area 18, Orison)..." autocomplete="off">
+                <div id="contract-to-dropdown" class="autocomplete-dropdown hidden"></div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <input type="number" id="contract-scu-input" placeholder="Cargo SCU (e.g. 200)" min="1" max="100000" class="form-select text-xs py-1">
+                <input type="text" id="contract-label-input" placeholder="Cargo Label (e.g. Waste)" class="form-select text-xs py-1">
+              </div>
+              <button id="btn-add-contract" class="action-btn w-full bg-amber-600/30 border border-amber-500/50 hover:bg-amber-600/50 text-amber-200 text-xs py-1.5">
+                + Add Mission Contract
+              </button>
+            </div>
+          </div>
+
+          <!-- Quantum Drive Selector -->
+          <div class="mb-3">
+            <label class="input-label mb-1" style="color: #cbd5e1;">QUANTUM DRIVE SPECIFICATION</label>
+            <select id="qt-drive-select" class="form-select"></select>
+          </div>
+
+          <!-- Commodity Trade & Profit Calculator (Optional) -->
+          <div class="mb-3">
+            <div class="flex justify-between items-center mb-1">
+              <label class="input-label" style="color: #cbd5e1;">COMMODITY & PROFIT ESTIMATE</label>
+              <span class="text-[10px] text-amber-400 font-normal">Optional</span>
+            </div>
+            <select id="commodity-select" class="form-select mb-1.5">
+              <option value="">-- Select Commodity (Optional) --</option>
+            </select>
+            <div id="commodity-inputs" class="hidden grid grid-cols-2 gap-2 mt-1">
+              <div>
+                <label class="text-[10px] text-slate-400 block">Buy Price (aUEC/SCU):</label>
+                <input type="number" id="comm-buy-price" class="form-select text-xs py-1" step="any">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 block">Sell Price (aUEC/SCU):</label>
+                <input type="number" id="comm-sell-price" class="form-select text-xs py-1" step="any">
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="space-y-2">
+            <button id="optimize-btn" class="btn-primary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+              CALCULATE FLEET ROUTES
+            </button>
+            <button id="clear-btn" class="btn-secondary" style="margin-top: 6px;">
+              CLEAR WAYPOINTS
+            </button>
+          </div>
+        </div>
+
+        <!-- Route Results Panel -->
+        <div id="route-results" class="route-results-container hidden">
+          <div class="panel-section-title">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            FLEET DISPATCH FLIGHT PLAN
+          </div>
+
+          <!-- Fleet Navigation Tabs -->
+          <div id="fleet-tabs-bar" class="flex gap-1.5 mb-2.5 overflow-x-auto pb-1"></div>
+
+          <!-- Visual Breadcrumb Flow -->
+          <div class="breadcrumb-pipeline-box">
+            <div class="flex justify-between items-center mb-2">
+              <span id="active-tab-title" class="text-[11px] text-slate-400 font-mono uppercase tracking-wider">Flight Sequence</span>
+              <span class="text-[10px] text-cyan-400">Click [✓] to tick off stops</span>
+            </div>
+            <div id="breadcrumb-display" class="breadcrumb-track"></div>
+          </div>
+
+          <!-- Pad & Landing Feasibility Warnings -->
+          <div id="pad-warning-container" class="hidden mb-2"></div>
+
+          <!-- Fuel Alert Warning (if fuel runs low) -->
+          <div id="fuel-alert-container" class="hidden mb-2"></div>
+
+          <!-- Financial Profit Breakdown (if commodity active) -->
+          <div id="commodity-results-container" class="hidden p-2.5 rounded bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-200">
+            <div class="flex justify-between items-center font-bold text-white border-b border-emerald-500/30 pb-1 mb-1.5">
+              <span>FLEET ESTIMATED PROFIT</span>
+              <span id="comm-net-profit" class="font-mono text-emerald-400 text-sm font-bold">+0 aUEC</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-300 font-mono">
+              <div>Total Cargo: <span id="comm-total-scu" class="text-white">--</span></div>
+              <div>Gross Revenue: <span id="comm-revenue" class="text-white">--</span></div>
+              <div>Fleet Fuel Expense: <span id="comm-fuel-cost" class="text-amber-400">--</span></div>
+              <div>Net In-Pocket: <span id="comm-net-pocket" class="text-emerald-300 font-bold">--</span></div>
+            </div>
+          </div>
+
+          <!-- Summary Metrics -->
+          <div class="route-summary-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="metric-card">
+              <div class="metric-label">Fleet Dist</div>
+              <div id="total-dist" class="metric-value">-- Mkm</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Mission Time</div>
+              <div id="total-time" class="metric-value" style="color: #34d399;">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Total Cargo</div>
+              <div id="total-cargo-cap" class="metric-value" style="color: #38bdf8;">-- SCU</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Fleet Fuel</div>
+              <div id="total-fuel-status" class="metric-value" style="color: #f59e0b;">--</div>
+            </div>
+          </div>
+
+          <!-- Save Current Route Button -->
+          <button id="btn-save-temp-route" class="btn-save-route">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            SAVE TEMPORARY FLEET ROUTE
+          </button>
+
+          <!-- Turn-by-Turn Leg Details -->
+          <div>
+            <div class="text-[11px] text-slate-400 mb-2 font-mono uppercase tracking-wider">Flight Navigation Log & Checklist</div>
+            <div id="legs-container" class="legs-list"></div>
+          </div>
+        </div>
+
+        <!-- Saved Flight Plans Panel -->
+        <div>
+          <div class="panel-section-title">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            </svg>
+            SAVED FLIGHT PLANS
+          </div>
+          <div id="saved-routes-container" class="saved-routes-box">
+            <div id="no-saved-routes" class="text-xs text-slate-500 italic p-2 border border-dashed border-slate-800 rounded text-center">
+              No saved routes yet. Click "Save Temporary Route" to store active flight plans.
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center/Right Starmap Canvas Viewport -->
+    <main class="starmap-viewport">
+      <canvas id="starmap-canvas"></canvas>
+
+      <!-- Floating Zoom Controls -->
+      <div class="map-floating-controls">
+        <button id="btn-zoom-in" class="map-btn" title="Zoom In">+</button>
+        <button id="btn-zoom-out" class="map-btn" title="Zoom Out">&minus;</button>
+        <button id="btn-reset-view" class="map-btn" title="Reset View" style="font-size: 11px;">RST</button>
+      </div>
+
+      <!-- Selected Landmark Inspector Card -->
+      <div id="node-inspector" class="node-inspector-box hidden"></div>
+
+      <!-- Map Legend -->
+      <div class="map-legend">
+        <div class="legend-item">
+          <div class="legend-icon" style="background: #38bdf8; border-radius: 50%;"></div>
+          <span>Planet</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: #94a3b8; border-radius: 50%;"></div>
+          <span>Moon</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: #06b6d4; transform: rotate(45deg);"></div>
+          <span>Orbital Station</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: #3b82f6;"></div>
+          <span>Landing City</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: #f59e0b; border-radius: 50%;"></div>
+          <span>Outpost</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: #a855f7; border-radius: 50%;"></div>
+          <span>Jump Point</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/optimizer.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
