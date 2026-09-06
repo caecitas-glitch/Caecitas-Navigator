@@ -776,6 +776,11 @@ document.addEventListener("DOMContentLoaded", () => {
       chip.querySelector(".chip-remove").addEventListener("click", () => {
         fromList = fromList.filter(it => it.uid !== item.uid);
         renderChips();
+        if (fromList.length > 0 && toList.length > 0) {
+          executeFleetOptimization();
+        } else {
+          clearFleetResults();
+        }
       });
       fromChipsContainer.appendChild(chip);
     });
@@ -794,6 +799,11 @@ document.addEventListener("DOMContentLoaded", () => {
       chip.querySelector(".chip-remove").addEventListener("click", () => {
         toList = toList.filter(it => it.uid !== item.uid);
         renderChips();
+        if (fromList.length > 0 && toList.length > 0) {
+          executeFleetOptimization();
+        } else {
+          clearFleetResults();
+        }
       });
       toChipsContainer.appendChild(chip);
     });
@@ -803,12 +813,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const uniqueUid = `p_${id}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     fromList.push({ uid: uniqueUid, id: id, scu: scu || 0 });
     renderChips();
+    if (fromList.length > 0 && toList.length > 0) {
+      executeFleetOptimization();
+    }
   }
 
   function addTo(id) {
     const uniqueUid = `d_${id}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     toList.push({ uid: uniqueUid, id: id });
     renderChips();
+    if (fromList.length > 0 && toList.length > 0) {
+      executeFleetOptimization();
+    }
   }
 
   // ==========================================
@@ -1170,27 +1186,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Success Status Notification Card
-    showRouteStatus("success", "Flight Plan Computed",
-      `Calculated path for <strong>${fleetResult.fleetRoutes.length} vessel(s)</strong> (${fleetResult.totalFleetDistanceMkm} Mkm &bull; ETA ${fleetResult.maxFleetTimeFormatted}). Flight paths active on starmap.`,
-      [
-        {
-          label: "📜 View Navigation Log",
-          onClick: () => {
-            const legsEl = document.getElementById("legs-container");
-            if (legsEl) legsEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
-          },
-          className: "text-emerald-400 border-emerald-500/50"
-        },
-        {
-          label: "🎯 Center Map",
-          onClick: () => {
-            map.setFleetRoutes(fleetResult.fleetRoutes);
-          },
-          className: "text-cyan-400 border-cyan-500/50"
-        }
-      ]
-    );
+    // Clear any previous error/warning notices
+    hideRouteStatus();
 
     currentFleetResult = fleetResult;
 
@@ -1223,9 +1220,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Default view is Fleet Overview
     showTabView(activeViewTab);
 
-    // Show Results Panel & scroll smoothly into view
+    // Show Results Panel
     routeResultsPanel.classList.remove("hidden");
-    routeResultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
 
     // Synchronize system switcher and resize map canvas
     syncSystemButtons(map.activeSystem);
@@ -1288,11 +1284,13 @@ document.addEventListener("DOMContentLoaded", () => {
         : "Combined Fleet Flight Plan (All Vessels)";
       renderCombinedFleetBreadcrumbs(currentFleetResult);
       renderCombinedFleetLegs(currentFleetResult);
+      map.setFleetRoutes(currentFleetResult.fleetRoutes);
     } else {
       const shipRoute = currentFleetResult.fleetRoutes.find(r => r.shipInfo.id === tabId) || currentFleetResult.fleetRoutes[0];
       activeTabTitle.textContent = `${shipRoute.shipInfo.name} - Individual Flight Plan (${shipRoute.totalScu} SCU)`;
       renderShipBreadcrumbs(shipRoute);
       renderShipLegs(shipRoute);
+      map.setFleetRoutes([shipRoute]);
     }
   }
 
@@ -1318,14 +1316,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const trackEl = section.querySelector(".breadcrumb-track");
       route.breadcrumbItems.forEach((item, idx) => {
+        const isCompleted = completedStepUids.has(item.stepUid);
         const nodeEl = document.createElement("div");
-        nodeEl.className = `breadcrumb-node ${item.isOrigin ? "origin" : item.isPickup ? "pickup" : "dropoff"}`;
-        nodeEl.style.borderColor = route.color + "99";
+        nodeEl.className = `breadcrumb-node ${isCompleted ? 'completed-node' : item.isOrigin ? "origin" : item.isPickup ? "pickup" : "dropoff"}`;
+        nodeEl.style.borderColor = isCompleted ? "rgba(100, 116, 139, 0.4)" : (route.color + "99");
         nodeEl.innerHTML = `
-          <div class="breadcrumb-tag">${item.tag}</div>
+          <div class="flex items-center justify-between gap-2">
+            <div class="breadcrumb-tag">${item.tag}</div>
+            <button class="stop-check-btn text-[9px] px-1 py-0.2 rounded border ${isCompleted ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-cyan-400'}" title="Tick off stop">${isCompleted ? '✓' : '○'}</button>
+          </div>
           <div class="breadcrumb-title">${item.label}</div>
           <div class="breadcrumb-sub">${item.node.system.toUpperCase()} &bull; Hold: ${item.cargoOnboard} SCU</div>
         `;
+        nodeEl.querySelector(".stop-check-btn")?.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          if (completedStepUids.has(item.stepUid)) {
+            completedStepUids.delete(item.stepUid);
+          } else {
+            completedStepUids.add(item.stepUid);
+          }
+          renderCombinedFleetBreadcrumbs(fleetResult);
+          renderCombinedFleetLegs(fleetResult);
+        });
         nodeEl.addEventListener("click", () => {
           map.focusOnNode(item.node.id);
           showNodeInspector(item.node);

@@ -325,7 +325,7 @@ class StarMap {
     this.drawSystemOrbits(ctx);
 
     // 3. Draw Active Route Vectors (if calculated)
-    if (this.currentRoute) {
+    if (this.currentRoute || (this.fleetRoutes && this.fleetRoutes.length > 0)) {
       this.drawRoute(ctx);
     }
 
