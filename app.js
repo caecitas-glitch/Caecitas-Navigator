@@ -38,9 +38,22 @@ document.addEventListener("DOMContentLoaded", () => {
   let toList = [];              // Clean: 0 default dropoffs
   let contractsList = [];       // Clean: 0 default contracts
 
-  // Active Fleet Roster (Clean Slate: 0 default ships)
+  // Active Fleet Roster (Pre-configured with Crusader C2 Hercules)
   const fleetColors = ["#00f0ff", "#f59e0b", "#c084fc", "#10b981", "#f43f5e", "#38bdf8", "#fbbf24", "#a855f7"];
-  let fleetShips = []; // Clean slate: ZERO default ships
+  const defaultShipTemplate = (data.ships && data.ships.length > 0)
+    ? (data.ships.find(s => s.id === "c2_hercules") || data.ships[0])
+    : null;
+  let fleetShips = defaultShipTemplate ? [{
+    id: `ship_init_${Date.now()}`,
+    typeId: defaultShipTemplate.id,
+    name: defaultShipTemplate.name,
+    scu: defaultShipTemplate.scu,
+    hangarSize: defaultShipTemplate.hangarSize || "XL",
+    fuelTankL: defaultShipTemplate.fuelTankL || 11000,
+    qtDriveId: defaultShipTemplate.qtDriveId || "size3_industrial",
+    color: fleetColors[0],
+    startLocationId: null
+  }] : [];
 
   let selectedCommodityId = "";
   let completedStepUids = new Set();
@@ -511,22 +524,70 @@ document.addEventListener("DOMContentLoaded", () => {
     toDropdown.classList.add("hidden");
   });
 
+  // ==========================================
+  // SMART FUZZY & NORMALIZED LOCATION MATCHER
+  // ==========================================
+  function findLocationMatch(query) {
+    if (!query || typeof query !== "string") return null;
+    const raw = query.trim().toLowerCase();
+    if (!raw) return null;
+    const clean = raw.replace(/[\s_\-\.]/g, "");
+
+    // 1. Exact ID or Exact Name match
+    let match = data.locations.find(loc => loc.id.toLowerCase() === raw || loc.name.toLowerCase() === raw);
+    if (match) return match;
+
+    // 2. Normalized clean match (e.g. 'area18' matches 'Area 18', 'porttressler' matches 'Port Tressler')
+    match = data.locations.find(loc => {
+      const locClean = loc.name.toLowerCase().replace(/[\s_\-\.]/g, "");
+      const idClean = loc.id.toLowerCase().replace(/[\s_\-\.]/g, "");
+      return locClean === clean || idClean === clean;
+    });
+    if (match) return match;
+
+    // 3. Prefix match (e.g. 'tress' matches 'Port Tressler', 'babb' matches 'New Babbage')
+    match = data.locations.find(loc => {
+      const locClean = loc.name.toLowerCase().replace(/[\s_\-\.]/g, "");
+      const idClean = loc.id.toLowerCase().replace(/[\s_\-\.]/g, "");
+      return locClean.startsWith(clean) || idClean.startsWith(clean) || loc.name.toLowerCase().startsWith(raw);
+    });
+    if (match) return match;
+
+    // 4. Substring match
+    match = data.locations.find(loc => {
+      const locClean = loc.name.toLowerCase().replace(/[\s_\-\.]/g, "");
+      const idClean = loc.id.toLowerCase().replace(/[\s_\-\.]/g, "");
+      return loc.name.toLowerCase().includes(raw) ||
+             loc.id.toLowerCase().includes(raw) ||
+             locClean.includes(clean) ||
+             idClean.includes(clean) ||
+             (loc.faction && loc.faction.toLowerCase().replace(/[\s_\-\.]/g, "").includes(clean)) ||
+             (loc.parent && loc.parent.toLowerCase().replace(/[\s_\-\.]/g, "").includes(clean));
+    });
+    return match || null;
+  }
+
   function setupAutocomplete(inputEl, dropdownEl, onSelect) {
     if (!inputEl || !dropdownEl) return;
 
     inputEl.addEventListener("input", (e) => {
-      const q = e.target.value.trim().toLowerCase();
-      if (q.length === 0) {
+      const raw = e.target.value.trim().toLowerCase();
+      if (raw.length === 0) {
         dropdownEl.classList.add("hidden");
         dropdownEl.innerHTML = "";
         return;
       }
+      const clean = raw.replace(/[\s_\-\.]/g, "");
 
       const matches = data.locations.filter(loc => {
-        return loc.name.toLowerCase().includes(q) ||
-               loc.id.toLowerCase().includes(q) ||
-               (loc.faction && loc.faction.toLowerCase().includes(q)) ||
-               (loc.parent && loc.parent.toLowerCase().includes(q));
+        const nClean = loc.name.toLowerCase().replace(/[\s_\-\.]/g, "");
+        const iClean = loc.id.toLowerCase().replace(/[\s_\-\.]/g, "");
+        return loc.name.toLowerCase().includes(raw) ||
+               loc.id.toLowerCase().includes(raw) ||
+               nClean.includes(clean) ||
+               iClean.includes(clean) ||
+               (loc.faction && loc.faction.toLowerCase().includes(raw)) ||
+               (loc.parent && loc.parent.toLowerCase().includes(raw));
       }).slice(0, 15);
 
       if (matches.length === 0) {
@@ -555,13 +616,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     inputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
-        const q = inputEl.value.trim().toLowerCase();
-        if (!q) return;
-        const firstMatch = data.locations.find(loc =>
-          loc.name.toLowerCase().includes(q) || loc.id.toLowerCase().includes(q)
-        );
-        if (firstMatch) {
-          onSelect(firstMatch);
+        e.preventDefault();
+        const match = findLocationMatch(inputEl.value);
+        if (match) {
+          onSelect(match);
           inputEl.value = "";
           dropdownEl.classList.add("hidden");
         }
@@ -816,45 +874,135 @@ document.addEventListener("DOMContentLoaded", () => {
   // FLEET OPTIMIZATION EXECUTION (BULK VRP & PAIRED CONTRACT MISSIONS)
   // ==========================================
   function executeFleetOptimization() {
+    // Auto-add ship if fleet is empty
     if (fleetShips.length === 0) {
-      alert("Please add at least one vessel to your hauling fleet before optimizing.");
-      return;
+      const selectedTypeId = fleetShipSelector ? fleetShipSelector.value : "c2_hercules";
+      const shipTemplate = (data.ships && data.ships.find(s => s.id === selectedTypeId)) ||
+                           (data.ships && data.ships[0]) || null;
+      if (shipTemplate) {
+        fleetShips.push({
+          id: `ship_${Date.now()}`,
+          typeId: shipTemplate.id,
+          name: shipTemplate.name,
+          scu: shipTemplate.scu,
+          hangarSize: shipTemplate.hangarSize || "XL",
+          fuelTankL: shipTemplate.fuelTankL || 11000,
+          qtDriveId: shipTemplate.qtDriveId || "size3_industrial",
+          color: fleetColors[0],
+          startLocationId: startingLocationId || null
+        });
+        renderFleetRoster();
+        showToast(`Added ${shipTemplate.name} to active fleet.`);
+      } else {
+        showToast("⚠️ Please add at least one vessel to your hauling fleet.");
+        alert("Please add at least one vessel to your hauling fleet before optimizing.");
+        return;
+      }
     }
 
-    const driveId = qtDriveSelect.value;
-    const buyPrice = commBuyPriceInput.value ? parseFloat(commBuyPriceInput.value) : undefined;
-    const sellPrice = commSellPriceInput.value ? parseFloat(commSellPriceInput.value) : undefined;
+    // Auto-commit unsubmitted input text if user typed without pressing Enter or clicking dropdown
+    if (haulingMode === "bulk") {
+      if (fromList.length === 0 && fromInput && fromInput.value.trim().length > 0) {
+        const match = findLocationMatch(fromInput.value);
+        if (match) {
+          const scuVal = parseInt(fromScuInput.value) || 0;
+          addFrom(match.id, scuVal);
+          fromInput.value = "";
+          fromScuInput.value = "";
+          if (fromDropdown) fromDropdown.classList.add("hidden");
+        }
+      }
+      if (toList.length === 0 && toInput && toInput.value.trim().length > 0) {
+        const match = findLocationMatch(toInput.value);
+        if (match) {
+          addTo(match.id);
+          toInput.value = "";
+          if (toDropdown) toDropdown.classList.add("hidden");
+        }
+      }
+    } else if (haulingMode === "contracts") {
+      const cFromText = contractFromInput ? contractFromInput.value.trim() : "";
+      const cToText = contractToInput ? contractToInput.value.trim() : "";
+      if (contractsList.length === 0 && (cFromText || selectedContractFrom) && (cToText || selectedContractTo)) {
+        const fromMatch = selectedContractFrom || findLocationMatch(cFromText);
+        const toMatch = selectedContractTo || findLocationMatch(cToText);
+        if (fromMatch && toMatch) {
+          const scuVal = parseInt(contractScuInput.value) || 100;
+          const labelVal = (contractLabelInput ? contractLabelInput.value.trim() : "") || "Waste / General";
+          const contractNum = contractsList.length + 1;
+          contractsList.push({
+            id: `c_${Date.now()}_${contractNum}`,
+            name: `Contract #${contractNum}`,
+            cargoName: labelVal,
+            fromId: fromMatch.id,
+            toId: toMatch.id,
+            fromName: fromMatch.name,
+            toName: toMatch.name,
+            scu: scuVal
+          });
+          if (contractFromInput) contractFromInput.value = "";
+          if (contractToInput) contractToInput.value = "";
+          if (contractScuInput) contractScuInput.value = "";
+          if (contractLabelInput) contractLabelInput.value = "";
+          selectedContractFrom = null;
+          selectedContractTo = null;
+          renderContractsList();
+        }
+      }
+    }
+
+    const driveId = (qtDriveSelect && qtDriveSelect.value) ? qtDriveSelect.value : "size3_industrial";
+    const buyPrice = (commBuyPriceInput && commBuyPriceInput.value) ? parseFloat(commBuyPriceInput.value) : undefined;
+    const sellPrice = (commSellPriceInput && commSellPriceInput.value) ? parseFloat(commSellPriceInput.value) : undefined;
     const avoidThreats = avoidThreatsToggle ? avoidThreatsToggle.checked : false;
 
     let fleetResult = null;
 
     if (haulingMode === "bulk") {
       if (fromList.length === 0 || toList.length === 0) {
-        alert("Please specify at least one Pickup (FROM) and one Delivery Destination (TO).");
+        const missing = [];
+        if (fromList.length === 0) missing.push("Pickup (FROM)");
+        if (toList.length === 0) missing.push("Delivery (TO)");
+        showToast(`⚠️ Please specify at least one ${missing.join(" and ")}.`);
+        alert(`Please specify at least one Pickup (FROM) and one Delivery Destination (TO).`);
         return;
       }
-      fleetResult = optimizer.computeFleetRoutes(fleetShips, fromList, toList, {
-        startLocationId: startingLocationId,
-        quantumDriveId: driveId,
-        commodityId: selectedCommodityId,
-        customBuyPrice: buyPrice,
-        customSellPrice: sellPrice,
-        avoidThreats: avoidThreats
-      });
+      try {
+        fleetResult = optimizer.computeFleetRoutes(fleetShips, fromList, toList, {
+          startLocationId: startingLocationId,
+          quantumDriveId: driveId,
+          commodityId: selectedCommodityId,
+          customBuyPrice: buyPrice,
+          customSellPrice: sellPrice,
+          avoidThreats: avoidThreats
+        });
+      } catch (err) {
+        console.error("Fleet route calculation error:", err);
+        showToast("❌ Calculation error. Check console for details.");
+        return;
+      }
     } else {
       // Contract missions mode
       if (contractsList.length === 0) {
+        showToast("⚠️ Please add at least one Paired Mission Contract.");
         alert("Please add at least one Paired Mission Contract.");
         return;
       }
-      fleetResult = optimizer.computeContractRoutes(fleetShips, contractsList, {
-        startLocationId: startingLocationId,
-        quantumDriveId: driveId,
-        avoidThreats: avoidThreats
-      });
+      try {
+        fleetResult = optimizer.computeContractRoutes(fleetShips, contractsList, {
+          startLocationId: startingLocationId,
+          quantumDriveId: driveId,
+          avoidThreats: avoidThreats
+        });
+      } catch (err) {
+        console.error("Contract route calculation error:", err);
+        showToast("❌ Calculation error. Check console for details.");
+        return;
+      }
     }
 
     if (!fleetResult || !fleetResult.fleetRoutes || fleetResult.fleetRoutes.length === 0) {
+      showToast("⚠️ Could not compute valid fleet routes for the selected destinations.");
       alert("Could not compute valid fleet routes for the selected destinations.");
       return;
     }
@@ -966,9 +1114,12 @@ document.addEventListener("DOMContentLoaded", () => {
     fleetResult.fleetRoutes.forEach((route, sIdx) => {
       const section = document.createElement("div");
       section.className = "w-full mb-3 p-2 rounded bg-slate-900/50 border border-slate-800";
+      const scuBadge = (route.totalScu && route.totalScu > 0)
+        ? `${route.totalScu.toLocaleString()} / ${(route.capacity || route.shipInfo.scu).toLocaleString()} SCU`
+        : `${(route.capacity || route.shipInfo.scu).toLocaleString()} SCU Capacity`;
       section.innerHTML = `
         <div class="flex items-center justify-between text-xs font-bold mb-1.5" style="color: ${route.color};">
-          <span>Ship #${sIdx + 1}: ${route.shipInfo.name} (${route.totalScu} / ${route.capacity} SCU)</span>
+          <span>Ship #${sIdx + 1}: ${route.shipInfo.name} (${scuBadge})</span>
           <span class="font-mono text-[10px] text-slate-400">${route.totalTimeFormatted} &bull; ${route.totalDistanceMkm} Mkm</span>
         </div>
         <div class="breadcrumb-track flex items-center flex-wrap gap-1"></div>

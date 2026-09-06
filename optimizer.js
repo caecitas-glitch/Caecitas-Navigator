@@ -671,6 +671,8 @@ class RouteOptimizer {
       if (!singleRoute) return null;
       singleRoute.shipInfo = singleShip;
       singleRoute.color = singleShip.color || "#00f0ff";
+      singleRoute.capacity = singleShip.scu || singleRoute.shipCapacity || 0;
+      singleRoute.totalScu = singleRoute.commodityStats ? singleRoute.commodityStats.totalScu : singleRoute.legs.reduce((s, l) => s + (l.scuLoaded || 0), 0);
       return {
         isFleet: false,
         fleetRoutes: [singleRoute],
