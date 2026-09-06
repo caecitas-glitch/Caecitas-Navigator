@@ -126,16 +126,6 @@
             </div>
           </div>
 
-          <!-- Starting Fleet Staging Base -->
-          <div class="mb-3">
-            <label class="input-label mb-1" style="color: #cbd5e1;">FLEET BASE / DEPARTURE (OPTIONAL)</label>
-            <div id="start-chip-container" class="mb-1.5"></div>
-            <div class="search-wrapper">
-              <input type="text" id="start-input" placeholder="Set global fleet departure port..." autocomplete="off">
-              <div id="start-dropdown" class="autocomplete-dropdown hidden"></div>
-            </div>
-          </div>
-
           <!-- BULK TRADING MODE CONTAINER -->
           <div id="bulk-mode-container">
             <!-- Pickup Locations (FROM) with SCU Quantities -->
@@ -190,44 +180,6 @@
             </div>
           </div>
 
-          <!-- Quantum Drive Selector -->
-          <div class="mb-3">
-            <label class="input-label mb-1" style="color: #cbd5e1;">QUANTUM DRIVE SPECIFICATION</label>
-            <select id="qt-drive-select" class="form-select"></select>
-          </div>
-
-          <!-- Security & Threat Level Routing Filter -->
-          <div class="mb-3 p-2 rounded bg-slate-900/70 border border-slate-800">
-            <label class="flex items-center gap-2 cursor-pointer text-xs select-none">
-              <input type="checkbox" id="avoid-threats-toggle" class="form-checkbox text-amber-500 rounded bg-slate-950 border-slate-700">
-              <span class="font-medium text-amber-400">⚠️ Avoid Unmonitored Scrap Yards & Hostile Gang Outposts</span>
-            </label>
-            <div class="text-[10px] text-slate-500 mt-1 pl-5">
-              Reroutes around Grim HEX, Brio's, Samson's, and Pyro pirate syndicate outposts unless directly targeted.
-            </div>
-          </div>
-
-          <!-- Commodity Trade & Profit Calculator (Optional) -->
-          <div class="mb-3">
-            <div class="flex justify-between items-center mb-1">
-              <label class="input-label" style="color: #cbd5e1;">COMMODITY & PROFIT ESTIMATE</label>
-              <span class="text-[10px] text-amber-400 font-normal">Optional</span>
-            </div>
-            <select id="commodity-select" class="form-select mb-1.5">
-              <option value="">-- Select Commodity (Optional) --</option>
-            </select>
-            <div id="commodity-inputs" class="hidden grid grid-cols-2 gap-2 mt-1">
-              <div>
-                <label class="text-[10px] text-slate-400 block">Buy Price (aUEC/SCU):</label>
-                <input type="number" id="comm-buy-price" class="form-select text-xs py-1" step="any">
-              </div>
-              <div>
-                <label class="text-[10px] text-slate-400 block">Sell Price (aUEC/SCU):</label>
-                <input type="number" id="comm-sell-price" class="form-select text-xs py-1" step="any">
-              </div>
-            </div>
-          </div>
-
           <!-- Action Buttons -->
           <div class="flex gap-2 mb-3">
             <button id="optimize-btn" class="btn-primary flex-1">
@@ -243,6 +195,69 @@
               </svg>
             </button>
           </div>
+
+          <!-- Collapsible Route & Flight Configuration -->
+          <details class="config-accordion">
+            <summary>
+              <span class="flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                <span>ROUTE &amp; FLIGHT CONFIGURATION</span>
+              </span>
+              <span class="text-[9px] text-slate-500 font-mono">OPTIONAL ▼</span>
+            </summary>
+            <div class="config-accordion-body">
+              <!-- Starting Fleet Staging Base -->
+              <div>
+                <label class="input-label mb-1" style="color: #cbd5e1;">FLEET BASE / DEPARTURE</label>
+                <div id="start-chip-container" class="mb-1.5"></div>
+                <div class="search-wrapper">
+                  <input type="text" id="start-input" placeholder="Set global departure port..." autocomplete="off">
+                  <div id="start-dropdown" class="autocomplete-dropdown hidden"></div>
+                </div>
+              </div>
+
+              <!-- Quantum Drive Selector -->
+              <div>
+                <label class="input-label mb-1" style="color: #cbd5e1;">QUANTUM DRIVE SPECIFICATION</label>
+                <select id="qt-drive-select" class="form-select text-xs py-1"></select>
+              </div>
+
+              <!-- Security & Threat Level Routing Filter -->
+              <div class="p-2 rounded bg-slate-900/70 border border-slate-800">
+                <label class="flex items-center gap-2 cursor-pointer text-xs select-none">
+                  <input type="checkbox" id="avoid-threats-toggle" class="form-checkbox text-amber-500 rounded bg-slate-950 border-slate-700">
+                  <span class="font-medium text-amber-400">⚠️ Avoid Hostile Scrap Yards &amp; Gang Outposts</span>
+                </label>
+                <div class="text-[10px] text-slate-500 mt-0.5 pl-5">
+                  Reroutes around Grim HEX, Brio's, Samson's, and Pyro pirate syndicates.
+                </div>
+              </div>
+
+              <!-- Commodity Trade & Profit Calculator (Optional) -->
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="input-label" style="color: #cbd5e1;">COMMODITY &amp; PROFIT ESTIMATE</label>
+                  <span class="text-[10px] text-amber-400 font-normal">Optional</span>
+                </div>
+                <select id="commodity-select" class="form-select text-xs py-1 mb-1.5">
+                  <option value="">-- Select Commodity (Optional) --</option>
+                </select>
+                <div id="commodity-inputs" class="hidden grid grid-cols-2 gap-2 mt-1">
+                  <div>
+                    <label class="text-[10px] text-slate-400 block">Buy Price (aUEC):</label>
+                    <input type="number" id="comm-buy-price" class="form-select text-xs py-1" step="any">
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block">Sell Price (aUEC):</label>
+                    <input type="number" id="comm-sell-price" class="form-select text-xs py-1" step="any">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
 
         <!-- Route Results Panel -->
