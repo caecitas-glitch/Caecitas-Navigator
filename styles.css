@@ -1436,3 +1436,93 @@ body {
   }
 }
 
+/* Route Status & Error Message Display Card */
+#route-status-card {
+  position: relative;
+  animation: statusFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes statusFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-error {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.55) !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
+}
+.status-error #route-status-title {
+  color: #f87171 !important;
+}
+.status-error #route-status-desc {
+  color: #fca5a5 !important;
+}
+
+.status-warning {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.55) !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+}
+.status-warning #route-status-title {
+  color: #fbbf24 !important;
+}
+.status-warning #route-status-desc {
+  color: #fde68a !important;
+}
+
+.status-success {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.55) !important;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+}
+.status-success #route-status-title {
+  color: #34d399 !important;
+}
+.status-success #route-status-desc {
+  color: #a7f3d0 !important;
+}
+
+.status-info {
+  background: rgba(6, 182, 212, 0.12) !important;
+  border-color: rgba(6, 182, 212, 0.55) !important;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
+}
+.status-info #route-status-title {
+  color: #38bdf8 !important;
+}
+.status-info #route-status-desc {
+  color: #bae6fd !important;
+}
+
+.status-btn-action {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid;
+}
+
+.input-error-pulse {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35) !important;
+  animation: shakeInput 0.35s ease-in-out;
+}
+
+@keyframes shakeInput {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+

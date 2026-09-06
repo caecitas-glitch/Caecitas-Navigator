@@ -147,7 +147,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const inspectorPanel = document.getElementById("node-inspector");
 
   // ==========================================
-  // TOAST NOTIFICATIONS
+  // ==========================================
+  // TOAST NOTIFICATIONS & ROUTE STATUS DISPLAY
   // ==========================================
   function showToast(msg) {
     const toast = document.getElementById("app-toast");
@@ -157,6 +158,100 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
       toast.classList.add("hidden");
     }, 3200);
+  }
+
+  const routeStatusCard = document.getElementById("route-status-card");
+  const routeStatusIcon = document.getElementById("route-status-icon");
+  const routeStatusTitle = document.getElementById("route-status-title");
+  const routeStatusDesc = document.getElementById("route-status-desc");
+  const routeStatusActions = document.getElementById("route-status-actions");
+  const btnDismissRouteStatus = document.getElementById("btn-dismiss-route-status");
+  const btnQuickDemoRoute = document.getElementById("btn-quick-demo-route");
+
+  function showRouteStatus(type, title, desc, actions = []) {
+    if (!routeStatusCard) return;
+    routeStatusCard.className = `mb-3 p-3 rounded-lg border text-xs transition-all duration-200 status-${type}`;
+
+    const icons = {
+      error: "❌",
+      warning: "⚠️",
+      success: "✓",
+      info: "ℹ️"
+    };
+    if (routeStatusIcon) routeStatusIcon.textContent = icons[type] || "⚠️";
+    if (routeStatusTitle) routeStatusTitle.textContent = title;
+    if (routeStatusDesc) routeStatusDesc.innerHTML = desc;
+
+    if (routeStatusActions) {
+      routeStatusActions.innerHTML = "";
+      actions.forEach(act => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `status-btn-action bg-slate-900/90 hover:bg-slate-800 ${act.className || "text-slate-200 border-slate-700"}`;
+        btn.innerHTML = act.label;
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          act.onClick();
+        });
+        routeStatusActions.appendChild(btn);
+      });
+    }
+
+    routeStatusCard.classList.remove("hidden");
+  }
+
+  function hideRouteStatus() {
+    if (routeStatusCard) routeStatusCard.classList.add("hidden");
+  }
+
+  if (btnDismissRouteStatus) {
+    btnDismissRouteStatus.addEventListener("click", hideRouteStatus);
+  }
+
+  // Quick Start Demo Route Loader
+  function loadQuickDemoRoute() {
+    hideRouteStatus();
+    haulingMode = "bulk";
+    updateModeUI();
+
+    // Ensure C2 ship exists
+    if (fleetShips.length === 0) {
+      const template = (data.ships && data.ships.find(s => s.id === "c2_hercules")) || data.ships[0];
+      fleetShips.push({
+        id: `ship_${Date.now()}`,
+        typeId: template.id,
+        name: template.name,
+        scu: template.scu,
+        hangarSize: template.hangarSize || "XL",
+        fuelTankL: template.fuelTankL || 11000,
+        qtDriveId: template.qtDriveId || "size3_industrial",
+        color: fleetColors[0],
+        startLocationId: null
+      });
+      renderFleetRoster();
+    }
+
+    fromList = [{ uid: `p_port_tressler_${Date.now()}`, id: "port_tressler", scu: 0 }];
+    toList = [{ uid: `d_area_18_${Date.now()}`, id: "area_18" }];
+    if (fromInput) fromInput.value = "";
+    if (toInput) toInput.value = "";
+    renderChips();
+    executeFleetOptimization();
+  }
+
+  if (btnQuickDemoRoute) {
+    btnQuickDemoRoute.addEventListener("click", loadQuickDemoRoute);
+  }
+
+  function syncSystemButtons(sysId) {
+    if (!sysId) return;
+    systemButtons.forEach(btn => {
+      if (btn.getAttribute("data-system") === sysId) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
   }
 
   // ==========================================
@@ -571,6 +666,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!inputEl || !dropdownEl) return;
 
     inputEl.addEventListener("input", (e) => {
+      inputEl.classList.remove("input-error-pulse");
       const raw = e.target.value.trim().toLowerCase();
       if (raw.length === 0) {
         dropdownEl.classList.add("hidden");
@@ -874,6 +970,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // FLEET OPTIMIZATION EXECUTION (BULK VRP & PAIRED CONTRACT MISSIONS)
   // ==========================================
   function executeFleetOptimization() {
+    hideRouteStatus();
+
     // Auto-add ship if fleet is empty
     if (fleetShips.length === 0) {
       const selectedTypeId = fleetShipSelector ? fleetShipSelector.value : "c2_hercules";
@@ -894,8 +992,12 @@ document.addEventListener("DOMContentLoaded", () => {
         renderFleetRoster();
         showToast(`Added ${shipTemplate.name} to active fleet.`);
       } else {
-        showToast("⚠️ Please add at least one vessel to your hauling fleet.");
-        alert("Please add at least one vessel to your hauling fleet before optimizing.");
+        showRouteStatus("error", "Active Vessel Required",
+          "Please select and add at least one vessel to your hauling fleet to calculate cargo routes.",
+          [
+            { label: "⚡ Load Sample: Port Tressler ➔ Area 18", onClick: loadQuickDemoRoute, className: "text-cyan-400 border-cyan-500/50" }
+          ]
+        );
         return;
       }
     }
@@ -903,21 +1005,44 @@ document.addEventListener("DOMContentLoaded", () => {
     // Auto-commit unsubmitted input text if user typed without pressing Enter or clicking dropdown
     if (haulingMode === "bulk") {
       if (fromList.length === 0 && fromInput && fromInput.value.trim().length > 0) {
-        const match = findLocationMatch(fromInput.value);
+        const raw = fromInput.value.trim();
+        const match = findLocationMatch(raw);
         if (match) {
           const scuVal = parseInt(fromScuInput.value) || 0;
           addFrom(match.id, scuVal);
           fromInput.value = "";
           fromScuInput.value = "";
           if (fromDropdown) fromDropdown.classList.add("hidden");
+        } else {
+          fromInput.classList.add("input-error-pulse");
+          setTimeout(() => fromInput.classList.remove("input-error-pulse"), 1500);
+          showRouteStatus("error", `Unknown Pickup Origin: "${raw}"`,
+            `Could not find a Star Citizen landmark or station matching <strong>"${raw}"</strong>. Please check spelling or select from search suggestions.`,
+            [
+              { label: "⚡ Use Sample Route", onClick: loadQuickDemoRoute, className: "text-cyan-400 border-cyan-500/50" }
+            ]
+          );
+          return;
         }
       }
+
       if (toList.length === 0 && toInput && toInput.value.trim().length > 0) {
-        const match = findLocationMatch(toInput.value);
+        const raw = toInput.value.trim();
+        const match = findLocationMatch(raw);
         if (match) {
           addTo(match.id);
           toInput.value = "";
           if (toDropdown) toDropdown.classList.add("hidden");
+        } else {
+          toInput.classList.add("input-error-pulse");
+          setTimeout(() => toInput.classList.remove("input-error-pulse"), 1500);
+          showRouteStatus("error", `Unknown Delivery Destination: "${raw}"`,
+            `Could not find a Star Citizen landmark or station matching <strong>"${raw}"</strong>. Please check spelling or select from search suggestions.`,
+            [
+              { label: "⚡ Use Sample Route", onClick: loadQuickDemoRoute, className: "text-cyan-400 border-cyan-500/50" }
+            ]
+          );
+          return;
         }
       }
     } else if (haulingMode === "contracts") {
@@ -961,10 +1086,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (haulingMode === "bulk") {
       if (fromList.length === 0 || toList.length === 0) {
         const missing = [];
-        if (fromList.length === 0) missing.push("Pickup (FROM)");
-        if (toList.length === 0) missing.push("Delivery (TO)");
-        showToast(`⚠️ Please specify at least one ${missing.join(" and ")}.`);
-        alert(`Please specify at least one Pickup (FROM) and one Delivery Destination (TO).`);
+        if (fromList.length === 0) {
+          missing.push("Pickup Origin (FROM)");
+          fromInput?.classList.add("input-error-pulse");
+          setTimeout(() => fromInput?.classList.remove("input-error-pulse"), 1500);
+        }
+        if (toList.length === 0) {
+          missing.push("Delivery Destination (TO)");
+          toInput?.classList.add("input-error-pulse");
+          setTimeout(() => toInput?.classList.remove("input-error-pulse"), 1500);
+        }
+        showRouteStatus("warning", "Waypoints Required to Plan Route",
+          `Please specify: <strong>${missing.join(" and ")}</strong>.<br>Enter locations in the input fields or click the sample route below to calculate immediately.`,
+          [
+            { label: "⚡ Load Sample: Port Tressler ➔ Area 18", onClick: loadQuickDemoRoute, className: "text-cyan-400 border-cyan-500/50" }
+          ]
+        );
         return;
       }
       try {
@@ -978,14 +1115,31 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       } catch (err) {
         console.error("Fleet route calculation error:", err);
-        showToast("❌ Calculation error. Check console for details.");
+        showRouteStatus("error", "Route Calculation Error",
+          `An error occurred while calculating flight path: <code>${err.message || err}</code>`,
+          [
+            { label: "⚡ Try Sample Route", onClick: loadQuickDemoRoute, className: "text-amber-400 border-amber-500/50" }
+          ]
+        );
         return;
       }
     } else {
       // Contract missions mode
       if (contractsList.length === 0) {
-        showToast("⚠️ Please add at least one Paired Mission Contract.");
-        alert("Please add at least one Paired Mission Contract.");
+        showRouteStatus("warning", "No Contracts Added",
+          "Please create at least one Paired Mission Contract above, or switch to <strong>Bulk Trading</strong> mode.",
+          [
+            {
+              label: "Switch to Bulk Trading",
+              onClick: () => {
+                haulingMode = "bulk";
+                updateModeUI();
+                hideRouteStatus();
+              },
+              className: "text-cyan-400 border-cyan-500/50"
+            }
+          ]
+        );
         return;
       }
       try {
@@ -996,16 +1150,47 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       } catch (err) {
         console.error("Contract route calculation error:", err);
-        showToast("❌ Calculation error. Check console for details.");
+        showRouteStatus("error", "Contract Calculation Error",
+          `An error occurred while computing contract routing: <code>${err.message || err}</code>`,
+          [
+            { label: "⚡ Try Sample Route", onClick: loadQuickDemoRoute, className: "text-amber-400 border-amber-500/50" }
+          ]
+        );
         return;
       }
     }
 
     if (!fleetResult || !fleetResult.fleetRoutes || fleetResult.fleetRoutes.length === 0) {
-      showToast("⚠️ Could not compute valid fleet routes for the selected destinations.");
-      alert("Could not compute valid fleet routes for the selected destinations.");
+      showRouteStatus("error", "No Feasible Route Found",
+        "Could not compute a valid flight path between the chosen destinations. If hostile threat avoidance is enabled, verify a safe jump path exists.",
+        [
+          { label: "⚡ Reset to Sample Route", onClick: loadQuickDemoRoute, className: "text-amber-400 border-amber-500/50" }
+        ]
+      );
       return;
     }
+
+    // Success Status Notification Card
+    showRouteStatus("success", "Flight Plan Computed",
+      `Calculated path for <strong>${fleetResult.fleetRoutes.length} vessel(s)</strong> (${fleetResult.totalFleetDistanceMkm} Mkm &bull; ETA ${fleetResult.maxFleetTimeFormatted}). Flight paths active on starmap.`,
+      [
+        {
+          label: "📜 View Navigation Log",
+          onClick: () => {
+            const legsEl = document.getElementById("legs-container");
+            if (legsEl) legsEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          },
+          className: "text-emerald-400 border-emerald-500/50"
+        },
+        {
+          label: "🎯 Center Map",
+          onClick: () => {
+            map.setFleetRoutes(fleetResult.fleetRoutes);
+          },
+          className: "text-cyan-400 border-cyan-500/50"
+        }
+      ]
+    );
 
     currentFleetResult = fleetResult;
 
@@ -1038,8 +1223,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // Default view is Fleet Overview
     showTabView(activeViewTab);
 
-    // Show Results Panel
+    // Show Results Panel & scroll smoothly into view
     routeResultsPanel.classList.remove("hidden");
+    routeResultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // Synchronize system switcher and resize map canvas
+    syncSystemButtons(map.activeSystem);
+    map.resize();
 
     // If Cockpit HUD is open, refresh HUD
     if (!cockpitHudOverlay.classList.contains("hidden")) {
@@ -1052,6 +1242,7 @@ document.addEventListener("DOMContentLoaded", () => {
     map.setFleetRoutes([]);
     completedStepUids.clear();
     routeResultsPanel.classList.add("hidden");
+    hideRouteStatus();
   }
 
   // ==========================================
